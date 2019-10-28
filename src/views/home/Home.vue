@@ -4,7 +4,8 @@
     <tab-control :titles="['流行','新款','精选']"
                  @tabClick="tabClick"
                  ref="tabControl1"
-                 class="tab-control" v-show="isTabFixed"/>
+                 class="tab-control"
+                 v-show="isTabFixed"/>
     <scroll class="content"
             ref="scroll"
             :probe-type="3"
@@ -33,11 +34,10 @@
   import TabControl from 'components/content/tabControl/TabControl'
   import GoodsList from 'components/content/goods/GoodsList'
   import Scroll from 'components/common/scroll/Scroll'
-  import BackTop from 'components/content/backTop/BackTop'
+
 
   import {getHomeMultidata, getHomeGoods} from "network/home";
-  import {debounce} from "common/utils";
-
+  import {itemListenerMixin, backTopMixin} from "common/mixin";
 
   export default {
     name: "Home",
@@ -48,8 +48,7 @@
       NavBar,
       TabControl,
       GoodsList,
-      Scroll,
-      BackTop
+      Scroll
     },
     computed: {
       showGoods() {
@@ -66,10 +65,9 @@
           'sell': {page: 0, list: []},
         },
         currentType: 'pop',
-        isShowBackTop: false,
         tabOffsetTop: 0,
         isTabFixed: false,
-        saveY: 0
+        saveY: 0,
       }
     },
     created(){
@@ -88,15 +86,14 @@
       this.$refs.scroll.refresh()
     },
     deactivated() {
+      //1.保存Y值
       this.saveY = this.$refs.scroll.getScrollY()
-    },
-    mounted() {
-      const refresh = debounce(this.$refs.scroll.refresh, 50)
 
-      //监听item图片加载完成
-      this.$bus.$on('itemImageLoad', () => {
-        refresh()
-      })
+      //2.取消全局事件的监听
+      this.$bus.$off('itemImageLoad', this.itemImgListener)
+    },
+    mixins: [itemListenerMixin, backTopMixin],
+    mounted() {
     },
     methods: {
       /**
@@ -114,11 +111,9 @@
             this.currentType = 'sell'
             break
         }
+        //让两个tabControl的currentIndex保持一致
         this.$refs.tabControl1.currentIndex =index;
         this.$refs.tabControl2.currentIndex =index;
-      },
-      backClick() {
-        this.$refs.scroll.scrollTo(0,0)
       },
       contentScroll(position) {
         //1.判断BackTop是否显示
